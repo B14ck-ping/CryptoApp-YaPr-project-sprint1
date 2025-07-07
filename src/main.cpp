@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <array>
 #include <iostream>
+#include <istream>
+#include <fstream>
 #include <openssl/evp.h>
 #include <print>
 #include <stdexcept>
@@ -81,22 +83,36 @@ int main(int argc, char *argv[]) {
         //
 
         CryptoGuard::ProgramOptions options;
+        options.Parse(argc, argv);
 
         CryptoGuard::CryptoGuardCtx cryptoCtx;
+        std::ifstream inStream(options.GetInputFile(), std::ios::binary);
+        std::ofstream outStream(options.GetOutputFile(), std::ios::binary);
 
         using COMMAND_TYPE = CryptoGuard::ProgramOptions::COMMAND_TYPE;
         switch (options.GetCommand()) {
-        case COMMAND_TYPE::ENCRYPT:
+        case COMMAND_TYPE::ENCRYPT: {
+            if (!inStream) throw std::runtime_error("Cannot open input file");
+            if (!outStream) throw std::runtime_error("Cannot open output file");
+            cryptoCtx.EncryptFile(inStream, outStream, options.GetPassword());
             std::print("File encoded successfully\n");
             break;
+        }
 
-        case COMMAND_TYPE::DECRYPT:
+        case COMMAND_TYPE::DECRYPT: {
+            if (!inStream) throw std::runtime_error("Cannot open input file");
+            if (!outStream) throw std::runtime_error("Cannot open output file");
+            cryptoCtx.DecryptFile(inStream, outStream, options.GetPassword());
             std::print("File decoded successfully\n");
             break;
+        }
 
-        case COMMAND_TYPE::CHECKSUM:
-            std::print("Checksum: {}\n", "CHECKSUM_NOT_IMPLEMENTED");
+        case COMMAND_TYPE::CHECKSUM: {
+            if (!inStream) throw std::runtime_error("Cannot open input file"); 
+            std::string checksum = cryptoCtx.CalculateChecksum(inStream);
+            std::print("Checksum: {}\n", checksum);
             break;
+        }
 
         default:
             throw std::runtime_error{"Unsupported command"};

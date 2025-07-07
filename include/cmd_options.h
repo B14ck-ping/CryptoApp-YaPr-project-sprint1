@@ -15,6 +15,7 @@ public:
         ENCRYPT,
         DECRYPT,
         CHECKSUM,
+        ERROR_TYPE
     };
 
     void Parse(int argc, char *argv[]);
