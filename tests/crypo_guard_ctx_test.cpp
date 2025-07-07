@@ -116,6 +116,7 @@ TEST(ChecksumTest, ChecksumDataAndDecryptedDataAreEqual) {
 
     CryptoGuardCtx cryptoCtx;
     std::string dataChecksum = cryptoCtx.CalculateChecksum(input);
+    input.clear();
     input.seekg(0);
 
     cryptoCtx.EncryptFile(input, encryptedOutput, password);
@@ -127,5 +128,5 @@ TEST(ChecksumTest, ChecksumDataAndDecryptedDataAreEqual) {
     std::string decryptedChecksum = cryptoCtx.CalculateChecksum(decryptedOutput);
     
 
-    // EXPECT_EQ(dataChecksum, decryptedChecksum); // SHA-256 produces a 64-character hex string
+    EXPECT_EQ(dataChecksum, decryptedChecksum); // SHA-256 produces a 64-character hex string
 }
