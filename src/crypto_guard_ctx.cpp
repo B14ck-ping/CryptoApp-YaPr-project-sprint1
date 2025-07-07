@@ -9,11 +9,17 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <sstream>
+#include <iomanip>
 
 #define IN_BUFFER_SIZE 4096
 #define OUT_BUFFER_SIZE 4096
 
+#define PrintSSLErrorString(msg) std::string(msg) + std::string(" Error: ") + ERR_error_string(ERR_get_error(), nullptr)
+
 namespace CryptoGuard {
+using CipherCtxDeleter = void(*)(EVP_CIPHER_CTX*);
+using CipherCtxUniquePtr = std::unique_ptr<EVP_CIPHER_CTX, CipherCtxDeleter>;
 struct AesCipherParams {
     static const size_t KEY_SIZE = 32;             // AES-256 key size
     static const size_t IV_SIZE = 16;              // AES block size (IV length)
@@ -40,14 +46,13 @@ public:
     {
         auto params = CreateCipherParamsFromPassword(password);
         params.encrypt = 1;
-        using CipherCtxDeleter = void(*)(EVP_CIPHER_CTX*);
-        std::unique_ptr<EVP_CIPHER_CTX, CipherCtxDeleter> ctx{EVP_CIPHER_CTX_new(), EVP_CIPHER_CTX_free};
+        CipherCtxUniquePtr ctx{EVP_CIPHER_CTX_new(), EVP_CIPHER_CTX_free};
         
 
         // Инициализируем cipher
         auto result = EVP_CipherInit_ex(ctx.get(), params.cipher, nullptr, params.key.data(), params.iv.data(), params.encrypt);
         if(result == 0){
-            throw std::runtime_error{std::string("Failed to initialize cipher: ") + ERR_error_string(ERR_get_error(), nullptr)};
+            throw std::runtime_error{PrintSSLErrorString("Failed to initialize cipher.")};
         }
 
         std::vector<unsigned char> outBuf(OUT_BUFFER_SIZE);
@@ -59,18 +64,24 @@ public:
             std::streamsize bytesRead = input.gcount();
             result = EVP_CipherUpdate(ctx.get(), outBuf.data(), &outLen, inBuf.data(), static_cast<int>(bytesRead));
             if(result == 0){
-                throw std::runtime_error{std::string("Cipher update error :") + ERR_error_string(ERR_get_error(), nullptr)};
+                throw std::runtime_error{PrintSSLErrorString("Cipher update error.")};
             }
-            output.write(reinterpret_cast<const char*>(outBuf.data()), outLen);
+            if (outLen > 0) {
+                output.write(reinterpret_cast<const char*>(outBuf.data()), outLen);
+            }else if (!output){
+                throw std::runtime_error{"Output stream error."};
+            }
         }
 
         // Заканчиваем работу с cipher
         EVP_CipherFinal_ex(ctx.get(), outBuf.data(), &outLen);
         if(result == 0){
-            throw std::runtime_error{std::string("Cipher final error: ") + ERR_error_string(ERR_get_error(), nullptr)};
+            throw std::runtime_error{PrintSSLErrorString("Cipher final error.")};
         }
         if (outLen > 0) {
             output.write(reinterpret_cast<const char*>(outBuf.data()), outLen);
+        }else if (!output){
+            throw std::runtime_error{"Output stream error."};
         }
     }
 
@@ -78,14 +89,13 @@ public:
     {
         auto params = CreateCipherParamsFromPassword(password);
         params.encrypt = 0;
-        using CipherCtxDeleter = void(*)(EVP_CIPHER_CTX*);
-        std::unique_ptr<EVP_CIPHER_CTX, CipherCtxDeleter> ctx{EVP_CIPHER_CTX_new(), EVP_CIPHER_CTX_free};
+        CipherCtxUniquePtr ctx{EVP_CIPHER_CTX_new(), EVP_CIPHER_CTX_free};
         
 
         // Инициализируем cipher
         auto result = EVP_CipherInit_ex(ctx.get(), params.cipher, nullptr, params.key.data(), params.iv.data(), params.encrypt);
         if(result == 0){
-            throw std::runtime_error{std::string("Failed to initialize cipher: ") + ERR_error_string(ERR_get_error(), nullptr)};
+            throw std::runtime_error{std::string("Failed to initialize cipher: ")};
         }
 
         std::vector<unsigned char> outBuf(OUT_BUFFER_SIZE);
@@ -97,29 +107,65 @@ public:
             std::streamsize bytesRead = input.gcount();
             result = EVP_CipherUpdate(ctx.get(), outBuf.data(), &outLen, inBuf.data(), static_cast<int>(bytesRead));
             if(result == 0){
-                throw std::runtime_error{std::string("Cipher update error :") + ERR_error_string(ERR_get_error(), nullptr)};
+                throw std::runtime_error{PrintSSLErrorString("Cipher update error.")};
             }
-            if (outLen > 0) {
+            if (outLen > 0 && output) {
                 output.write(reinterpret_cast<const char*>(outBuf.data()), outLen);
+            } else if (!output){
+                throw std::runtime_error{"Output stream error."};
             }
         }
 
         // Заканчиваем работу с cipher
         result = EVP_CipherFinal_ex(ctx.get(), outBuf.data(), &outLen);
         if(result == 0){
-            throw std::runtime_error{std::string("Cipher final error: ") + ERR_error_string(ERR_get_error(), nullptr)};
+            throw std::runtime_error{PrintSSLErrorString("Cipher final error.")};
         }
-        if (outLen > 0) {
+        if (outLen > 0 && output) {
             output.write(reinterpret_cast<const char*>(outBuf.data()), outLen);
+        } else if (!output){
+            throw std::runtime_error{"Output stream error."};
         }
     }
 
     std::string CalculateChecksum(std::istream &input)
     {
-        
+        unsigned char md_value[EVP_MAX_MD_SIZE];
+        unsigned int md_len = 0;
 
+        using EVP_MD_Deleter = void(*)(EVP_MD_CTX*);    
+        using EVP_MD_CTX_UniquePtr = std::unique_ptr<EVP_MD_CTX, EVP_MD_Deleter>;
+        EVP_MD_CTX_UniquePtr mdctx{EVP_MD_CTX_new(), EVP_MD_CTX_free};
 
-        return std::string("return");
+        if (mdctx.get() == NULL) {
+            throw std::runtime_error{PrintSSLErrorString("Message digest create failed. Error: ")};
+        }
+
+        if (!EVP_DigestInit_ex2(mdctx.get(), EVP_sha256(), NULL)) {
+            throw std::runtime_error{PrintSSLErrorString("Message digest initialization failed. Error: ")};
+        }
+
+        std::vector<unsigned char> buffer(IN_BUFFER_SIZE);
+        while (input) {
+            input.read(reinterpret_cast<char *>(buffer.data()), buffer.size());
+            std::streamsize bytesRead = input.gcount();
+            if (bytesRead > 0) {    
+                if (!EVP_DigestUpdate(mdctx.get(), buffer.data(), static_cast<size_t>(bytesRead))) {
+                    throw std::runtime_error{PrintSSLErrorString("Message digest update failed. Error: ")};
+                }
+            }
+        }
+
+        if (!EVP_DigestFinal_ex(mdctx.get(), md_value, &md_len)) {
+            throw std::runtime_error{PrintSSLErrorString("Message digest finalization failed. Error: ")};
+        }
+        std::ostringstream oss;
+        for (unsigned int i = 0; i < md_len; ++i) {
+            oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(md_value[i]);
+        }
+        std::string checksum = oss.str();
+
+        return checksum;
     }
 
 
@@ -132,7 +178,7 @@ public:
                                     params.key.data(), params.iv.data());
 
         if (result == 0) {
-            throw std::runtime_error{"Failed to create a key from password"};
+            throw std::runtime_error{PrintSSLErrorString("Failed to create a key from password")};
         }
 
         return params;
