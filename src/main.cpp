@@ -1,7 +1,7 @@
 #include "cmd_options.h"
 #include "crypto_guard_ctx.h"
-#include <iostream>
 #include <fstream>
+#include <iostream>
 #include <print>
 #include <stdexcept>
 #include <string>
@@ -18,23 +18,28 @@ int main(int argc, char *argv[]) {
         using COMMAND_TYPE = CryptoGuard::ProgramOptions::COMMAND_TYPE;
         switch (options.GetCommand()) {
         case COMMAND_TYPE::ENCRYPT: {
-            if (!inStream) throw std::runtime_error("Cannot open input file");
-            if (!outStream) throw std::runtime_error("Cannot open output file");
+            if (!inStream)
+                throw std::runtime_error("Cannot open input file");
+            if (!outStream)
+                throw std::runtime_error("Cannot open output file");
             cryptoCtx.EncryptFile(inStream, outStream, options.GetPassword());
             std::print("File encoded successfully\n");
             break;
         }
 
         case COMMAND_TYPE::DECRYPT: {
-            if (!inStream) throw std::runtime_error("Cannot open input file");
-            if (!outStream) throw std::runtime_error("Cannot open output file");
+            if (!inStream)
+                throw std::runtime_error("Cannot open input file");
+            if (!outStream)
+                throw std::runtime_error("Cannot open output file");
             cryptoCtx.DecryptFile(inStream, outStream, options.GetPassword());
             std::print("File decoded successfully\n");
             break;
         }
 
         case COMMAND_TYPE::CHECKSUM: {
-            if (!inStream) throw std::runtime_error("Cannot open input file"); 
+            if (!inStream)
+                throw std::runtime_error("Cannot open input file");
             std::string checksum = cryptoCtx.CalculateChecksum(inStream);
             std::print("Checksum: {}\n", checksum);
             break;

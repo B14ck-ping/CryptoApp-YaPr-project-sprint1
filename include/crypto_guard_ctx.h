@@ -1,8 +1,8 @@
 #pragma once
 
-#include <string>
 #include <experimental/propagate_const>
 #include <memory>
+#include <string>
 
 namespace CryptoGuard {
 

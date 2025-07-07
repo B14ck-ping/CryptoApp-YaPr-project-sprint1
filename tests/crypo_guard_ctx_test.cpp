@@ -1,9 +1,9 @@
-#include <gtest/gtest.h>
 #include "crypto_guard_ctx.h"
+#include <gtest/gtest.h>
 
+#include <iostream>
 #include <sstream>
 #include <string>
-#include <iostream>
 
 using namespace CryptoGuard;
 
@@ -12,8 +12,7 @@ const char *TEST_DATA_SHA256_HASH = "9aa2b2c0d1ed2fa5dea5b3af401e4a9046a02288dd1
 const char *TEST_PASSWORD1 = "securepassword";
 const char *TEST_PASSWORD2 = "securepassword2";
 
-TEST(EncryptionTest, EncryptedDataIsNotEmptyTest) 
-{ 
+TEST(EncryptionTest, EncryptedDataIsNotEmptyTest) {
     std::stringstream input(TEST_DATA);
     std::stringstream output;
     std::string password = TEST_PASSWORD1;
@@ -104,13 +103,12 @@ TEST(ChecksumTest, ChecksumIsCorrect) {
 
     std::string checksum = cryptoCtx.CalculateChecksum(input);
     std::string expectedChecksum(TEST_DATA_SHA256_HASH);
-    EXPECT_EQ(checksum, expectedChecksum); // SHA-256 produces a 64-character hex string
+    EXPECT_EQ(checksum, expectedChecksum);  // SHA-256 produces a 64-character hex string
 }
 
 TEST(ChecksumTest, ChecksumDataAndDecryptedDataAreEqual) {
     std::stringstream input(TEST_DATA);
     std::stringstream encryptedOutput;
-    
 
     std::string password = TEST_PASSWORD1;
 
@@ -126,7 +124,6 @@ TEST(ChecksumTest, ChecksumDataAndDecryptedDataAreEqual) {
 
     cryptoCtx.DecryptFile(decryptedInput, decryptedOutput, password);
     std::string decryptedChecksum = cryptoCtx.CalculateChecksum(decryptedOutput);
-    
 
-    EXPECT_EQ(dataChecksum, decryptedChecksum); // SHA-256 produces a 64-character hex string
+    EXPECT_EQ(dataChecksum, decryptedChecksum);  // SHA-256 produces a 64-character hex string
 }
