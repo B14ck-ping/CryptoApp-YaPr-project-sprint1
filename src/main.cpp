@@ -13,7 +13,7 @@ int main(int argc, char *argv[]) {
 
         CryptoGuard::CryptoGuardCtx cryptoCtx;
         std::ifstream inStream(options.GetInputFile(), std::ios::binary);
-        std::ofstream outStream(options.GetOutputFile(), std::ios::binary);
+        std::ofstream outStream(options.GetOutputFile(), std::ios::trunc);
 
         using COMMAND_TYPE = CryptoGuard::ProgramOptions::COMMAND_TYPE;
         switch (options.GetCommand()) {

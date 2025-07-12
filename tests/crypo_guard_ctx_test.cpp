@@ -1,5 +1,7 @@
 #include "crypto_guard_ctx.h"
+
 #include <gtest/gtest.h>
+#include <gmock/gmock.h>
 
 #include <iostream>
 #include <sstream>
@@ -7,33 +9,32 @@
 
 using namespace CryptoGuard;
 
-const char *TEST_DATA = "Test data for encryption.";
-const char *TEST_DATA_SHA256_HASH = "9aa2b2c0d1ed2fa5dea5b3af401e4a9046a02288dd1461865e4329912f1a758d";
-const char *TEST_PASSWORD1 = "securepassword";
-const char *TEST_PASSWORD2 = "securepassword2";
+const std::string testData("Test data for encryption.");
+const std::string testDataSHA256Hash("9aa2b2c0d1ed2fa5dea5b3af401e4a9046a02288dd1461865e4329912f1a758d");
+const std::string testPwd1("securepassword");
+const std::string testPwd2("securepassword2");
 
 TEST(EncryptionTest, EncryptedDataIsNotEmptyTest) {
-    std::stringstream input(TEST_DATA);
+    std::stringstream input(testData);
     std::stringstream output;
-    std::string password = TEST_PASSWORD1;
 
     CryptoGuardCtx cryptoCtx;
-    cryptoCtx.EncryptFile(input, output, password);
+    cryptoCtx.EncryptFile(input, output, testPwd1);
 
     std::string encrypted = output.str();
     EXPECT_FALSE(encrypted.empty());
-    EXPECT_NE(encrypted, TEST_DATA);
+    EXPECT_NE(encrypted, testData);
 }
 
 TEST(EncryptionTest, DifferentPasswordsGiveDifferentCiphertexts) {
-    std::stringstream input1(TEST_DATA);
-    std::stringstream input2(TEST_DATA);
+    std::stringstream input1(testData);
+    std::stringstream input2(testData);
     std::stringstream output1;
     std::stringstream output2;
 
     CryptoGuardCtx cryptoCtx;
-    cryptoCtx.EncryptFile(input1, output1, std::string(TEST_PASSWORD1));
-    cryptoCtx.EncryptFile(input2, output2, std::string(TEST_PASSWORD2));
+    cryptoCtx.EncryptFile(input1, output1, std::string(testPwd1));
+    cryptoCtx.EncryptFile(input2, output2, std::string(testPwd2));
 
     EXPECT_NE(output1.str(), output2.str());
 }
@@ -41,52 +42,76 @@ TEST(EncryptionTest, DifferentPasswordsGiveDifferentCiphertexts) {
 TEST(EncryptionTest, TestBadOutputStreamThrowsException) {
     std::stringstream input{};
     std::stringstream output;
-    std::string password = TEST_PASSWORD1;
     output.setstate(std::ios::badbit);
 
     CryptoGuardCtx cryptoCtx;
-    EXPECT_ANY_THROW(cryptoCtx.EncryptFile(input, output, password));
+    ASSERT_THAT(
+        [&]() { cryptoCtx.EncryptFile(input, output, testPwd1); },
+            testing::ThrowsMessage<std::runtime_error>(
+                testing::HasSubstr("Output stream error")));
+}
+
+TEST(EncryptionTest, TestInputAndOutputStreamsIsEqualThrowsException) {
+    std::stringstream input;
+
+    CryptoGuardCtx cryptoCtx;
+    ASSERT_THAT(
+        [&]() { cryptoCtx.EncryptFile(input, input, testPwd1); },
+        ThrowsMessage<std::runtime_error>(testing::HasSubstr("Output and input streams must be different"))
+    );
 }
 
 TEST(DecryptionTest, TestBadOutputStreamThrowsException) {
     std::stringstream input{};
     std::stringstream output;
-    std::string password = TEST_PASSWORD1;
     output.setstate(std::ios::badbit);
 
     CryptoGuardCtx cryptoCtx;
-    EXPECT_ANY_THROW(cryptoCtx.DecryptFile(input, output, password));
+    ASSERT_THAT(
+        [&]() { cryptoCtx.DecryptFile(input, output, testPwd1); },
+            testing::ThrowsMessage<std::runtime_error>(
+                testing::HasSubstr("Output stream error")));
 }
 
 TEST(DecryptionTest, DecryptedDataMatchesOriginalTest) {
-    std::stringstream input(TEST_DATA);
+    std::stringstream input(testData);
     std::stringstream encryptedOutput;
-    std::string password = TEST_PASSWORD1;
 
     CryptoGuardCtx cryptoCtx;
-    cryptoCtx.EncryptFile(input, encryptedOutput, password);
+    cryptoCtx.EncryptFile(input, encryptedOutput, testPwd1);
 
     std::stringstream decryptedInput(encryptedOutput.str());
     std::stringstream decryptedOutput;
 
-    cryptoCtx.DecryptFile(decryptedInput, decryptedOutput, password);
+    cryptoCtx.DecryptFile(decryptedInput, decryptedOutput, testPwd1);
 
-    EXPECT_EQ(decryptedOutput.str(), TEST_DATA);
+    EXPECT_EQ(decryptedOutput.str(), testData);
 }
 
 TEST(DecryptionTest, DifferentPasswordsThrowException) {
-    std::stringstream input(TEST_DATA);
+    std::stringstream input(testData);
     std::stringstream encryptedOutput;
-    std::string password1 = TEST_PASSWORD1;
-    std::string password2 = TEST_PASSWORD2;
 
     CryptoGuardCtx cryptoCtx;
-    cryptoCtx.EncryptFile(input, encryptedOutput, password1);
+    cryptoCtx.EncryptFile(input, encryptedOutput, testPwd1);
 
     std::stringstream decryptedInput(encryptedOutput.str());
     std::stringstream decryptedOutput;
 
-    EXPECT_ANY_THROW(cryptoCtx.DecryptFile(decryptedInput, decryptedOutput, password2));
+    ASSERT_THAT(
+        [&]() { cryptoCtx.DecryptFile(decryptedInput, decryptedOutput, testPwd2); },
+            testing::ThrowsMessage<std::runtime_error>(
+                testing::HasSubstr("Cipher final error.")));
+}
+
+TEST(DecryptionTest, TestInputAndOutputStreamsIsEqualThrowsException) {
+    std::stringstream input{};
+
+    CryptoGuardCtx cryptoCtx;
+    ASSERT_THAT(
+        [&]() { cryptoCtx.DecryptFile(input, input, testPwd2); },
+            testing::ThrowsMessage<std::runtime_error>(
+                testing::HasSubstr("Output and input streams must be different")));
 }
 
 TEST(DecryptionTest, DecryptionOfGarbageDataThrows) {
@@ -95,34 +120,35 @@ TEST(DecryptionTest, DecryptionOfGarbageDataThrows) {
     std::stringstream output;
 
     CryptoGuardCtx cryptoCtx;
-    EXPECT_THROW(cryptoCtx.DecryptFile(input, output, "somepassword"), std::runtime_error);
+    ASSERT_THAT(
+        [&]() { cryptoCtx.DecryptFile(input, output, testPwd1); },
+            testing::ThrowsMessage<std::runtime_error>(
+                testing::HasSubstr("Cipher final error.")));
 }
 TEST(ChecksumTest, ChecksumIsCorrect) {
-    std::stringstream input(TEST_DATA);
+    std::stringstream input(testData);
     CryptoGuardCtx cryptoCtx;
 
     std::string checksum = cryptoCtx.CalculateChecksum(input);
-    std::string expectedChecksum(TEST_DATA_SHA256_HASH);
+    std::string expectedChecksum(testDataSHA256Hash);
     EXPECT_EQ(checksum, expectedChecksum);  // SHA-256 produces a 64-character hex string
 }
 
 TEST(ChecksumTest, ChecksumDataAndDecryptedDataAreEqual) {
-    std::stringstream input(TEST_DATA);
+    std::stringstream input(testData);
     std::stringstream encryptedOutput;
-
-    std::string password = TEST_PASSWORD1;
 
     CryptoGuardCtx cryptoCtx;
     std::string dataChecksum = cryptoCtx.CalculateChecksum(input);
     input.clear();
     input.seekg(0);
 
-    cryptoCtx.EncryptFile(input, encryptedOutput, password);
+    cryptoCtx.EncryptFile(input, encryptedOutput, testPwd1);
 
     std::stringstream decryptedInput(encryptedOutput.str());
     std::stringstream decryptedOutput;
 
-    cryptoCtx.DecryptFile(decryptedInput, decryptedOutput, password);
+    cryptoCtx.DecryptFile(decryptedInput, decryptedOutput, testPwd1);
     std::string decryptedChecksum = cryptoCtx.CalculateChecksum(decryptedOutput);
 
     EXPECT_EQ(dataChecksum, decryptedChecksum);  // SHA-256 produces a 64-character hex string
