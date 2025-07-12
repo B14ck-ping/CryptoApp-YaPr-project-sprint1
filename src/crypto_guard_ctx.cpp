@@ -49,7 +49,7 @@ void CryptoGuardCtx::Impl::EncryptFile(std::istream &input, std::ostream &output
 }
 
 void CryptoGuardCtx::Impl::DecryptFile(std::istream &input, std::ostream &output, std::string_view password) {
-    doCryptFile(input, output, password, 0);   
+    doCryptFile(input, output, password, 0);
 }
 
 std::string CryptoGuardCtx::Impl::CalculateChecksum(std::istream &input) {
@@ -106,9 +106,9 @@ AesCipherParams CryptoGuardCtx::Impl::CreateCipherParamsFromPassword(std::string
     return params;
 }
 
-void CryptoGuardCtx::Impl::doCryptFile(std::istream &input, std::ostream &output, std::string_view password, int cryptType)
-{
-    if (&dynamic_cast<std::stringstream&>(input) == &dynamic_cast<std::stringstream&>(output)) {
+void CryptoGuardCtx::Impl::doCryptFile(std::istream &input, std::ostream &output, std::string_view password,
+                                       int cryptType) {
+    if (&dynamic_cast<std::stringstream &>(input) == &dynamic_cast<std::stringstream &>(output)) {
         throw std::runtime_error{"Output and input streams must be different."};
     }
 
@@ -171,11 +171,10 @@ void CryptoGuardCtx::DecryptFile(std::istream &input, std::ostream &output, std:
     pImpl_->DecryptFile(input, output, password);
 }
 
-std::string CryptoGuardCtx::CalculateChecksum(std::istream &input) 
-{ 
+std::string CryptoGuardCtx::CalculateChecksum(std::istream &input) {
     if (!input)
         throw std::runtime_error{"Input stream error"};
-    return pImpl_->CalculateChecksum(input); 
+    return pImpl_->CalculateChecksum(input);
 }
 
 }  // namespace CryptoGuard

@@ -1,7 +1,7 @@
 #include "crypto_guard_ctx.h"
 
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include <iostream>
 #include <sstream>
@@ -45,20 +45,16 @@ TEST(EncryptionTest, TestBadOutputStreamThrowsException) {
     output.setstate(std::ios::badbit);
 
     CryptoGuardCtx cryptoCtx;
-    ASSERT_THAT(
-        [&]() { cryptoCtx.EncryptFile(input, output, testPwd1); },
-            testing::ThrowsMessage<std::runtime_error>(
-                testing::HasSubstr("Output stream error")));
+    ASSERT_THAT([&]() { cryptoCtx.EncryptFile(input, output, testPwd1); },
+                testing::ThrowsMessage<std::runtime_error>(testing::HasSubstr("Output stream error")));
 }
 
 TEST(EncryptionTest, TestInputAndOutputStreamsIsEqualThrowsException) {
     std::stringstream input;
 
     CryptoGuardCtx cryptoCtx;
-    ASSERT_THAT(
-        [&]() { cryptoCtx.EncryptFile(input, input, testPwd1); },
-        ThrowsMessage<std::runtime_error>(testing::HasSubstr("Output and input streams must be different"))
-    );
+    ASSERT_THAT([&]() { cryptoCtx.EncryptFile(input, input, testPwd1); },
+                ThrowsMessage<std::runtime_error>(testing::HasSubstr("Output and input streams must be different")));
 }
 
 TEST(DecryptionTest, TestBadOutputStreamThrowsException) {
@@ -67,10 +63,8 @@ TEST(DecryptionTest, TestBadOutputStreamThrowsException) {
     output.setstate(std::ios::badbit);
 
     CryptoGuardCtx cryptoCtx;
-    ASSERT_THAT(
-        [&]() { cryptoCtx.DecryptFile(input, output, testPwd1); },
-            testing::ThrowsMessage<std::runtime_error>(
-                testing::HasSubstr("Output stream error")));
+    ASSERT_THAT([&]() { cryptoCtx.DecryptFile(input, output, testPwd1); },
+                testing::ThrowsMessage<std::runtime_error>(testing::HasSubstr("Output stream error")));
 }
 
 TEST(DecryptionTest, DecryptedDataMatchesOriginalTest) {
@@ -98,10 +92,8 @@ TEST(DecryptionTest, DifferentPasswordsThrowException) {
     std::stringstream decryptedInput(encryptedOutput.str());
     std::stringstream decryptedOutput;
 
-    ASSERT_THAT(
-        [&]() { cryptoCtx.DecryptFile(decryptedInput, decryptedOutput, testPwd2); },
-            testing::ThrowsMessage<std::runtime_error>(
-                testing::HasSubstr("Cipher final error.")));
+    ASSERT_THAT([&]() { cryptoCtx.DecryptFile(decryptedInput, decryptedOutput, testPwd2); },
+                testing::ThrowsMessage<std::runtime_error>(testing::HasSubstr("Cipher final error.")));
 }
 
 TEST(DecryptionTest, TestInputAndOutputStreamsIsEqualThrowsException) {
@@ -110,8 +102,7 @@ TEST(DecryptionTest, TestInputAndOutputStreamsIsEqualThrowsException) {
     CryptoGuardCtx cryptoCtx;
     ASSERT_THAT(
         [&]() { cryptoCtx.DecryptFile(input, input, testPwd2); },
-            testing::ThrowsMessage<std::runtime_error>(
-                testing::HasSubstr("Output and input streams must be different")));
+        testing::ThrowsMessage<std::runtime_error>(testing::HasSubstr("Output and input streams must be different")));
 }
 
 TEST(DecryptionTest, DecryptionOfGarbageDataThrows) {
@@ -120,10 +111,8 @@ TEST(DecryptionTest, DecryptionOfGarbageDataThrows) {
     std::stringstream output;
 
     CryptoGuardCtx cryptoCtx;
-    ASSERT_THAT(
-        [&]() { cryptoCtx.DecryptFile(input, output, testPwd1); },
-            testing::ThrowsMessage<std::runtime_error>(
-                testing::HasSubstr("Cipher final error.")));
+    ASSERT_THAT([&]() { cryptoCtx.DecryptFile(input, output, testPwd1); },
+                testing::ThrowsMessage<std::runtime_error>(testing::HasSubstr("Cipher final error.")));
 }
 TEST(ChecksumTest, ChecksumIsCorrect) {
     std::stringstream input(testData);

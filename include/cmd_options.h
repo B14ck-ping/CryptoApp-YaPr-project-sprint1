@@ -13,7 +13,7 @@ public:
 
     enum class COMMAND_TYPE { ENCRYPT, DECRYPT, CHECKSUM, ERROR_TYPE };
 
-    void Parse(const int argc, const char * const *argv);
+    void Parse(const int argc, const char *const *argv);
 
     COMMAND_TYPE GetCommand() const { return command_; }
     std::string GetInputFile() const { return inputFile_; }
